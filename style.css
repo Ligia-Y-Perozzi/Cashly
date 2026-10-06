@@ -1,0 +1,118 @@
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f8;
+      color: #222;
+      line-height: 1.5;
+    }
+
+    header {
+      width: 100%;
+      padding: 1rem;
+      background-color: #0d123c;
+      color: white;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+    }
+
+    nav {
+      margin-top: 0.75rem;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin: 0 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    main {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    section {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    section h2 {
+      margin-bottom: 0.75rem;
+      font-size: 1.2rem;
+      color: #1f4e79;
+    }
+
+    .campo {
+      margin-bottom: 0.75rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-weight: bold;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.7rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+
+    button {
+      border: none;
+      background-color: #0d123c;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #ff5a5f;
+    }
+
+    footer {
+      padding: 1rem;
+      text-align: center;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    @media (min-width: 600px) {
+      header h1 {
+        font-size: 2rem;
+      }
+
+      .formulario {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+
+      .campo,
+      button {
+        margin-bottom: 0;
+      }
+
+      button {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
