@@ -1,0 +1,225 @@
+CREATE DATABASE IF NOT EXISTS Cashly;
+USE Cashly;
+
+DROP TABLE IF EXISTS metas;
+DROP TABLE IF EXISTS transacoes;
+DROP TABLE IF EXISTS categorias;
+DROP TABLE IF EXISTS usuarios;
+
+CREATE TABLE usuarios (
+    id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(150) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    senha_hash VARCHAR(255) NOT NULL,
+    criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE categorias (
+    id_categoria INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(150) NOT NULL,
+    tipo VARCHAR(10) NOT NULL,
+
+    CONSTRAINT chk_categoria_tipo
+        CHECK (tipo IN ('receita', 'despesa')),
+
+    CONSTRAINT uq_categoria_nome_tipo
+        UNIQUE (nome, tipo)
+);
+
+CREATE TABLE transacoes (
+    id_transacao INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    categoria_id INT NOT NULL,
+    valor DECIMAL(10,2) NOT NULL,
+    data_transacao DATE NOT NULL,
+    descricao VARCHAR(255),
+    observacao VARCHAR(255),
+
+    CONSTRAINT chk_transacao_valor
+        CHECK (valor > 0),
+
+    CONSTRAINT fk_transacao_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuarios(id_usuario),
+
+    CONSTRAINT fk_transacao_categoria
+        FOREIGN KEY (categoria_id)
+        REFERENCES categorias(id_categoria),
+
+    INDEX idx_transacao_usuario_data
+        (usuario_id, data_transacao)
+);
+
+CREATE TABLE metas (
+    id_meta INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    titulo VARCHAR(150) NOT NULL,
+    valor_alvo DECIMAL(10,2) NOT NULL,
+    valor_atual DECIMAL(10,2) NOT NULL DEFAULT 0,
+    prazo DATE,
+
+    CONSTRAINT chk_meta_valor_alvo
+        CHECK (valor_alvo > 0),
+
+    CONSTRAINT chk_meta_valor_atual
+        CHECK (valor_atual >= 0),
+
+    CONSTRAINT fk_meta_usuario
+        FOREIGN KEY (usuario_id)
+        REFERENCES usuarios(id_usuario),
+
+    INDEX idx_meta_usuario_prazo
+        (usuario_id, prazo)
+);
+
+INSERT INTO categorias (nome, tipo) VALUES
+    ('Salário', 'receita'),
+    ('Rendimentos', 'receita'),
+    ('Freelance', 'receita'),
+    ('Outras receitas', 'receita'),
+
+    ('Alimentação', 'despesa'),
+    ('Moradia', 'despesa'),
+    ('Transporte', 'despesa'),
+    ('Saúde', 'despesa'),
+    ('Educação', 'despesa'),
+    ('Lazer', 'despesa'),
+    ('Contas e serviços', 'despesa'),
+    ('Compras', 'despesa'),
+    ('Outras despesas', 'despesa');
+
+-- Senha de teste dos dois usuários: Cashly@teste1
+INSERT INTO usuarios (nome, email, senha_hash) VALUES
+    ('Amanda', 'amanda@teste.com', '2b12$VZGGK4IpkxvvMlQ1aelEn.4o/MmPV0J1wOoEJBk2.I9EwRck8jspK'),
+    ('Caio', 'caio@teste.com', '2b12$VZGGK4IpkxvvMlQ1aelEn.4o/MmPV0J1wOoEJBk2.I9EwRck8jspK');
+
+INSERT INTO transacoes (usuario_id, categoria_id, valor, data_transacao, descricao) VALUES
+    (1, 5, 184.90, '2024-08-27', 'Mercado Livre'),
+    (1, 7,  24.50, '2024-08-27', 'Uber'),
+    (1, 10, 55.90, '2024-08-26', 'Netflix Assinatura'),
+    (1, 5,  78.00, '2024-08-26', 'iFood Delivery'),
+    (1, 8,  42.10, '2024-08-25', 'Drogaria São Paulo'),
+    (1, 8, 119.90, '2024-08-25', 'SmartFit Academia'),
+    (1, 5, 150.00, '2024-07-10', 'Supermercado'),
+    (1, 5,  62.00, '2024-07-18', 'Restaurante'),
+    (1, 10, 55.90, '2024-07-26', 'Netflix Assinatura');
+
+INSERT INTO metas (usuario_id, titulo, valor_alvo, valor_atual, prazo) VALUES
+    (1, 'Fundo de Emergência', 15000.00, 8200.00, '2024-12-31'),
+    (1, 'Viagem Japão',       12000.00, 3400.00, '2025-07-31'),
+    (1, 'Iphone novo',          9500.00, 6800.00, '2024-10-31');
+
+SHOW TABLES;
+
+DESCRIBE usuarios;
+DESCRIBE categorias;
+DESCRIBE transacoes;
+DESCRIBE metas;
+
+SELECT * FROM categorias;
+
+SELECT c.nome AS categoria,
+       SUM(t.valor) AS total_gasto
+FROM transacoes t
+JOIN categorias c ON c.id_categoria = t.categoria_id
+WHERE t.usuario_id = 1
+  AND c.tipo = 'despesa'
+  AND t.data_transacao BETWEEN '2024-08-01' AND '2024-08-31'
+GROUP BY c.nome
+ORDER BY total_gasto DESC;
+
+SELECT c.tipo,
+       SUM(t.valor) AS total
+FROM transacoes t
+JOIN categorias c ON c.id_categoria = t.categoria_id
+WHERE t.usuario_id = 1
+  AND t.data_transacao BETWEEN '2024-08-01' AND '2024-08-31'
+GROUP BY c.tipo;
+
+SELECT YEAR(t.data_transacao) AS ano,
+       MONTH(t.data_transacao) AS mes,
+       SUM(t.valor) AS total_gasto
+FROM transacoes t
+JOIN categorias c ON c.id_categoria = t.categoria_id
+WHERE t.usuario_id = 1
+  AND c.tipo = 'despesa'
+GROUP BY YEAR(t.data_transacao), MONTH(t.data_transacao)
+ORDER BY ano, mes;
+
+SELECT YEAR(t.data_transacao) AS ano,
+       MONTH(t.data_transacao) AS mes,
+       SUM(t.valor) AS total_alimentacao
+FROM transacoes t
+JOIN categorias c ON c.id_categoria = t.categoria_id
+WHERE t.usuario_id = 1
+  AND c.nome = 'Alimentação'
+GROUP BY YEAR(t.data_transacao), MONTH(t.data_transacao)
+ORDER BY ano, mes;
+
+SELECT c.nome AS categoria,
+       COUNT(*) AS quantidade,
+       SUM(t.valor) AS total
+FROM transacoes t
+JOIN categorias c ON c.id_categoria = t.categoria_id
+WHERE t.usuario_id = 1
+  AND c.tipo = 'despesa'
+GROUP BY c.nome
+HAVING COUNT(*) >= 2
+ORDER BY quantidade DESC;
+
+SELECT DAYOFWEEK(t.data_transacao) AS dia_da_semana,
+       SUM(t.valor) AS total_gasto
+FROM transacoes t
+JOIN categorias c ON c.id_categoria = t.categoria_id
+WHERE t.usuario_id = 1
+  AND c.tipo = 'despesa'
+GROUP BY DAYOFWEEK(t.data_transacao)
+ORDER BY dia_da_semana;
+
+SELECT SUM(CASE WHEN c.tipo = 'receita' THEN t.valor ELSE -t.valor END) AS saldo
+FROM transacoes t
+JOIN categorias c ON c.id_categoria = t.categoria_id
+WHERE t.usuario_id = 1;
+
+SELECT titulo,
+       valor_atual,
+       valor_alvo,
+       ROUND(valor_atual / valor_alvo * 100) AS porcentagem
+FROM metas
+WHERE usuario_id = 1;
+
+
+SELECT t.data_transacao AS dia,
+       SUM(t.valor) AS total_gasto
+FROM transacoes t
+JOIN categorias c ON c.id_categoria = t.categoria_id
+WHERE t.usuario_id = 1
+  AND c.tipo = 'despesa'
+  AND t.data_transacao BETWEEN '2024-08-21' AND '2024-08-27'
+GROUP BY t.data_transacao
+ORDER BY dia;
+
+
+SELECT YEAR(t.data_transacao) AS ano,
+       MONTH(t.data_transacao) AS mes,
+       c.nome AS categoria,
+       SUM(t.valor) AS total_gasto
+FROM transacoes t
+JOIN categorias c ON c.id_categoria = t.categoria_id
+WHERE t.usuario_id = 1
+  AND c.tipo = 'despesa'
+  AND t.data_transacao BETWEEN '2024-07-01' AND '2024-08-31'
+GROUP BY YEAR(t.data_transacao), MONTH(t.data_transacao), c.nome
+ORDER BY categoria, ano, mes;
+
+
+SELECT t.descricao,
+       t.valor,
+       COUNT(*) AS quantidade
+FROM transacoes t
+JOIN categorias c ON c.id_categoria = t.categoria_id
+WHERE t.usuario_id = 1
+  AND c.tipo = 'despesa'
+GROUP BY t.descricao, t.valor
+HAVING COUNT(*) >= 2
+ORDER BY t.valor DESC;
