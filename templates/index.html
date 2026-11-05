@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cashly | Gerenciador Pessoal</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/script.js" defer></script>
+</head>
+<body>
+
+  <!-- TELA DE AUTENTICAÇÃO (NOVA - adicionada para o login funcionar) -->
+  <div id="tela-auth" class="fundo-modal" style="display: flex; z-index: 9999;">
+    <section class="modal" style="width: 400px;">
+      <h2 id="titulo-auth">Entrar no Cashly</h2>
+      <p id="subtitulo-auth">Acesse sua conta para continuar.</p>
+      
+      <form id="form-auth">
+        <div id="campo-nome" style="display: none;">
+          <label for="auth-nome">Nome</label>
+          <input id="auth-nome" name="nome" type="text" placeholder="Seu nome">
+        </div>
+        
+        <label for="auth-email">Email</label>
+        <input id="auth-email" name="email" type="email" placeholder="seu@email.com" required>
+        
+        <label for="auth-senha">Senha</label>
+        <input id="auth-senha" name="senha" type="password" placeholder="Sua senha" required>
+        
+        <div class="acoes-form" style="margin-top: 20px;">
+          <button class="botao botao-coral botao-enviar" type="submit" id="btn-submit-auth" style="width: 100%;">Entrar</button>
+        </div>
+      </form>
+      
+      <p style="text-align: center; margin-top: 15px;">
+        <a href="#" id="link-alternar-auth" style="color: var(--coral);">Não tem conta? Cadastre-se</a>
+      </p>
+    </section>
+  </div>
+
+  <!-- LAYOUT ORIGINAL -->
+  <div class="layout">
+    <aside class="barra-lateral">
+      <a class="marca" href="#inicio" aria-label="Cashly, página inicial">
+        <span class="marca-icone">$</span>
+        <span><strong>Cashly</strong><small>Gerenciador Pessoal</small></span>
+      </a>
+ 
+      <nav class="menu" aria-label="Navegação principal">
+        <button class="link-menu ativo" type="button" data-pagina="inicio">
+          <span class="icone-menu icone-casa" aria-hidden="true">◆</span>Início
+        </button>
+        <button class="link-menu" type="button" data-pagina="extrato">
+          <span class="icone-menu icone-extrato" aria-hidden="true"></span>Extrato
+        </button>
+        <button class="link-menu" type="button" data-pagina="metas">
+          <span class="icone-menu icone-meta" aria-hidden="true">●</span>Metas
+        </button>
+        <button class="link-menu" type="button" data-pagina="insights">
+          <span class="icone-menu icone-insights" aria-hidden="true">▲</span>Insights
+        </button>
+      </nav>
+ 
+      <div class="usuario">
+        <div class="avatar" aria-hidden="true">A</div>
+        <div><small>Bem-vinda de volta</small><strong id="nome-usuario-sidebar">Amanda</strong></div>
+      </div>
+    </aside>
+ 
+    <main class="conteudo">
+      <header class="cabecalho">
+        <div>
+          <h1 id="titulo-pagina">Visão Geral</h1>
+          <p id="subtitulo-pagina">Acompanhe suas finanças em tempo real.</p>
+        </div>
+        <div class="acoes-cabecalho">
+          <button class="botao botao-coral" id="botao-nova-transacao" type="button">
+            <span aria-hidden="true">＋</span> Nova Transação
+          </button>
+          <button class="botao-sino" type="button" aria-label="Notificações">
+            <span aria-hidden="true">🔔</span><i class="badge-sino" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+ 
+      <!-- Tela Início -->
+      <section class="pagina" id="pagina-inicio">
+        <section class="cartao-saldo" aria-label="Resumo financeiro">
+          <div class="saldo-principal">
+            <span>Saldo Disponível</span>
+            <strong id="saldo">R$ 0,00</strong>
+          </div>
+          <div class="resumo-movimento">
+            <div class="barra-resumo"><span></span></div>
+            <div class="valores-resumo">
+              <p>Entradas<strong class="texto-verde" id="total-entradas">+ R$ 0,00</strong></p>
+              <p>Saídas<strong class="texto-coral" id="total-saidas">- R$ 0,00</strong></p>
+            </div>
+          </div>
+        </section>
+ 
+        <div class="grade-paineis">
+          <section class="cartao painel-categorias">
+            <div class="titulo-cartao">
+              <h2>Gastos por Categoria</h2><span class="etiqueta">Este Mês</span>
+            </div>
+            <div class="categorias-conteudo">
+              <div class="grafico-rosca" role="img" aria-label="Gráfico ilustrativo de gastos por categoria">
+                <div><small>Total Gasto</small><strong>R$ 2.610</strong></div>
+              </div>
+              <ul class="legenda">
+                <li><span class="ponto ponto-laranja"></span>Alimentação <strong>40%</strong></li>
+                <li><span class="ponto ponto-verde-agua"></span>Saúde <strong>20%</strong></li>
+                <li><span class="ponto ponto-azul"></span>Transporte <strong>15%</strong></li>
+                <li><span class="ponto ponto-roxo"></span>Lazer <strong>15%</strong></li>
+                <li><span class="ponto ponto-amarelo"></span>Moradia <strong>10%</strong></li>
+              </ul>
+            </div>
+            <button class="link-detalhes" type="button" data-ir="categorias">Ver detalhes por categoria →</button>
+          </section>
+ 
+          <section class="cartao painel-semanal">
+            <div class="titulo-cartao">
+              <div><h2>Evolução Semanal de Gastos</h2><p>Últimos 7 dias em relação à média mensal</p></div>
+              <span class="destaque-coral">Despesas Ativas</span>
+            </div>
+            <div class="grafico-linha" role="img" aria-label="Gráfico ilustrativo de gastos nos últimos sete dias">
+              <div class="linhas-grade"><i></i><i></i><i></i></div>
+              <svg viewBox="0 0 500 125" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="5,82 75,103 145,26 215,58 285,37 355,98 425,76 495,60"></polyline>
+              </svg>
+            </div>
+            <div class="dias-semana"><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span></div>
+          </section>
+        </div>
+      </section>
+ 
+      <!-- Tela Extrato -->
+      <section class="pagina escondido" id="pagina-extrato">
+        <section class="cartao filtros-extrato" aria-label="Filtros do extrato">
+          <div class="seletor-mes">
+            <button class="botao-seta" id="mes-anterior" type="button" aria-label="Mês anterior">‹</button>
+            <strong id="mes-atual">Agosto, 2024</strong>
+            <button class="botao-seta" id="mes-proximo" type="button" aria-label="Próximo mês">›</button>
+          </div>
+          <label class="busca">
+            <span aria-hidden="true">⌕</span>
+            <input id="busca-transacao" type="search" placeholder="Buscar transação..." aria-label="Buscar transação">
+          </label>
+          <div class="filtros-tipo" aria-label="Filtrar transações">
+            <button type="button" class="filtro ativo" data-filtro="todas">Tudo</button>
+            <button type="button" class="filtro" data-filtro="receita">Receitas</button>
+            <button type="button" class="filtro" data-filtro="despesa">Despesas</button>
+          </div>
+        </section>
+ 
+        <section class="cartao lista-extrato">
+          <h2 class="titulo-grupo">Hoje</h2>
+          <div id="lista-hoje"></div>
+          <p class="mensagem-vazia escondido" id="mensagem-vazia">Nenhuma transação encontrada.</p>
+        </section>
+      </section>
+ 
+      <!-- Tela Metas -->
+      <section class="pagina escondido" id="pagina-metas">
+        <div class="grade-metas" id="lista-metas">
+          <!-- Preenchido via JS -->
+        </div>
+      </section>
+ 
+      <!-- Tela Insights -->
+      <section class="pagina escondido" id="pagina-insights">
+        <div class="grade-insights">
+          <article class="cartao-alerta" aria-label="Alerta de gasto">
+            <div class="topo-alerta">
+              <span class="icone-alerta" aria-hidden="true">⚠</span>
+              <strong>ALERTA DE GASTO</strong>
+            </div>
+            <p class="texto-alerta">Você gastou <b>23% mais</b> em Alimentação este mês comparado ao mês passado.</p>
+            <div class="comparativo">
+              <div class="coluna-barra"><i class="barra-julho"></i><span>Julho</span></div>
+              <div class="coluna-barra atual"><i class="barra-agosto"></i><span>Agosto</span></div>
+              <div class="diferenca"><small>Diferença de valor estimado</small><strong>+ R$ 240,00</strong></div>
+            </div>
+          </article>
+ 
+          <div class="coluna-insights">
+            <section>
+              <h2 class="titulo-bloco">Padrões Identificados</h2>
+              <div class="lista-insights">
+                <article class="cartao cartao-insight">
+                  <div class="textos"><h3>Pico aos Fins de Semana</h3><p>Seus maiores débitos ocorrem concentrados entre sexta e domingo.</p></div>
+                  <span class="pilula">Fim de Semana</span>
+                </article>
+                <article class="cartao cartao-insight">
+                  <div class="textos"><h3>Assinaturas e Recorrentes</h3><p>Totalizam R$ 189,00 por mês (Netflix, Spotify, etc).</p></div>
+                  <span class="pilula">R$ 189/mês</span>
+                </article>
+              </div>
+            </section>
+ 
+            <section>
+              <h2 class="titulo-bloco">Dicas &amp; Recomendações</h2>
+              <div class="lista-insights">
+                <article class="cartao cartao-insight dica">
+                  <span class="icone-dica fundo-amarelo" aria-hidden="true">☕</span>
+                  <div class="textos"><h3>Reduzir gastos com delivery</h3><p>Você pode economizar até <b>R$ 340,00</b> por mês preparando mais refeições em casa.</p></div>
+                </article>
+                <article class="cartao cartao-insight dica">
+                  <span class="icone-dica fundo-verde" aria-hidden="true">🛡️</span>
+                  <div class="textos"><h3>Meta Fundo de Emergência</h3><p>Excelente! No ritmo atual de depósitos, você completará sua reserva de emergência 2 meses antes do planejado.</p></div>
+                </article>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+ 
+      <footer class="rodape"><p>© 2026 Cashly — Projeto de PI</p></footer>
+    </main>
+  </div>
+ 
+  <!-- Formulário para cadastrar uma transação -->
+  <div class="fundo-modal escondido" id="modal-transacao">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="titulo-modal">
+      <button class="fechar-modal" id="fechar-modal" type="button" aria-label="Fechar">×</button>
+      <h2 id="titulo-modal">Nova Transação</h2>
+      <p>Preencha os dados para adicionar ao extrato.</p>
+      <form id="form-transacao">
+        <span class="rotulo-campo">Tipo de Lançamento</span>
+        <div class="tipo-segmentado" role="group" aria-label="Tipo de lançamento">
+          <button class="aba-tipo" type="button" data-tipo="receita">Receita</button>
+          <button class="aba-tipo ativo" type="button" data-tipo="despesa">Despesa</button>
+        </div>
+        <input id="tipo" name="tipo" type="hidden" value="despesa">
+        <label for="descricao">Descrição</label>
+        <input id="descricao" name="descricao" type="text" placeholder="Ex.: Conta de luz" required>
+        <label for="categoria">Categoria</label>
+        <input id="categoria" name="categoria" type="text" list="lista-categorias" autocomplete="off" placeholder="Ex.: Moradia" required>
+        <datalist id="lista-categorias"></datalist>
+        <label for="valor">Valor (R$)</label>
+        <input id="valor" name="valor" type="number" min="0.01" step="0.01" placeholder="0,00" required>
+        <label for="data">Data do Pagamento</label>
+        <input id="data" name="data" type="date">
+        <label for="observacao">Observações (Opcional)</label>
+        <textarea id="observacao" name="observacao" rows="3" placeholder="Escreva uma nota..."></textarea>
+        <div class="acoes-form">
+          <button class="botao botao-voltar" id="voltar-modal" type="button">Voltar</button>
+          <button class="botao botao-coral botao-enviar" id="botao-salvar" type="submit">Salvar Despesa</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</body>
+</html>
