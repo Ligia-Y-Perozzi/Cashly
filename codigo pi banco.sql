@@ -88,26 +88,46 @@ INSERT INTO categorias (nome, tipo) VALUES
     ('Compras', 'despesa'),
     ('Outras despesas', 'despesa');
 
--- Senha de teste dos dois usuários: Cashly@teste1
+-- Usuários de teste. Senha dos dois: 123456 (hash bcrypt real, aceito pelo login da API)
 INSERT INTO usuarios (nome, email, senha_hash) VALUES
-    ('Amanda', 'amanda@teste.com', '2b12$VZGGK4IpkxvvMlQ1aelEn.4o/MmPV0J1wOoEJBk2.I9EwRck8jspK'),
-    ('Caio', 'caio@teste.com', '2b12$VZGGK4IpkxvvMlQ1aelEn.4o/MmPV0J1wOoEJBk2.I9EwRck8jspK');
+    ('Amanda', 'amanda@teste.com', '$2b$12$899Bkl9p8VNcj4HNOt/HDOQNz0MnlP9TYFL6pB3E7SN6trj4JcY9u'),
+    ('Caio', 'caio@teste.com', '$2b$12$899Bkl9p8VNcj4HNOt/HDOQNz0MnlP9TYFL6pB3E7SN6trj4JcY9u');
 
-INSERT INTO transacoes (usuario_id, categoria_id, valor, data_transacao, descricao) VALUES
-    (1, 5, 184.90, '2024-08-27', 'Mercado Livre'),
-    (1, 7,  24.50, '2024-08-27', 'Uber'),
-    (1, 10, 55.90, '2024-08-26', 'Netflix Assinatura'),
-    (1, 5,  78.00, '2024-08-26', 'iFood Delivery'),
-    (1, 8,  42.10, '2024-08-25', 'Drogaria São Paulo'),
-    (1, 8, 119.90, '2024-08-25', 'SmartFit Academia'),
-    (1, 5, 150.00, '2024-07-10', 'Supermercado'),
-    (1, 5,  62.00, '2024-07-18', 'Restaurante'),
-    (1, 10, 55.90, '2024-07-26', 'Netflix Assinatura');
+-- Transações de exemplo da Amanda.
+-- As datas são relativas a hoje (CURDATE()), assim o extrato mostra "Hoje" e "Ontem"
+-- e existe um "mês passado" para comparar, em qualquer dia em que o script rodar.
+-- dias = quantos dias atrás aconteceu a transação
+INSERT INTO transacoes (usuario_id, categoria_id, valor, data_transacao, descricao)
+SELECT u.id_usuario, c.id_categoria, d.valor, CURDATE() - INTERVAL d.dias DAY, d.descricao
+FROM (
+    -- Este mês
+    SELECT 'Salário' AS categoria, 'receita' AS tipo, 4500.00 AS valor, 1 AS dias, 'Salário Finny Corp' AS descricao UNION ALL
+    SELECT 'Alimentação', 'despesa',  184.90,  0, 'Mercado Livre'      UNION ALL
+    SELECT 'Transporte',  'despesa',   24.50,  0, 'Uber Trip'          UNION ALL
+    SELECT 'Lazer',       'despesa',   55.90,  1, 'Netflix Assinatura' UNION ALL
+    SELECT 'Alimentação', 'despesa',   78.00,  1, 'iFood Delivery'     UNION ALL
+    SELECT 'Saúde',       'despesa',   42.10,  2, 'Drogaria São Paulo' UNION ALL
+    SELECT 'Moradia',     'despesa',  210.40,  2, 'Enel Distribuidora' UNION ALL
+    SELECT 'Saúde',       'despesa',  119.90,  2, 'SmartFit Academia'  UNION ALL
+    -- Mês passado (para a comparação dos Insights)
+    SELECT 'Salário',     'receita', 4500.00, 31, 'Salário Finny Corp' UNION ALL
+    SELECT 'Alimentação', 'despesa',  150.00, 35, 'Supermercado'       UNION ALL
+    SELECT 'Alimentação', 'despesa',   62.00, 38, 'Restaurante'        UNION ALL
+    SELECT 'Lazer',       'despesa',   55.90, 31, 'Netflix Assinatura' UNION ALL
+    SELECT 'Moradia',     'despesa',  198.70, 33, 'Enel Distribuidora'
+) AS d
+JOIN categorias c ON c.nome = d.categoria AND c.tipo = d.tipo
+JOIN usuarios u ON u.email = 'amanda@teste.com';
 
-INSERT INTO metas (usuario_id, titulo, valor_alvo, valor_atual, prazo) VALUES
-    (1, 'Fundo de Emergência', 15000.00, 8200.00, '2024-12-31'),
-    (1, 'Viagem Japão',       12000.00, 3400.00, '2025-07-31'),
-    (1, 'Iphone novo',          9500.00, 6800.00, '2024-10-31');
+-- Metas de exemplo da Amanda (mesmos nomes do protótipo), com prazos no futuro
+INSERT INTO metas (usuario_id, titulo, valor_alvo, valor_atual, prazo)
+SELECT u.id_usuario, m.titulo, m.valor_alvo, m.valor_atual, CURDATE() + INTERVAL m.meses MONTH
+FROM (
+    SELECT 'Fundo de Emergência' AS titulo, 15000.00 AS valor_alvo, 8200.00 AS valor_atual, 6 AS meses UNION ALL
+    SELECT 'Viagem Europa', 12000.00, 3400.00, 12 UNION ALL
+    SELECT 'MacBook Pro',    9500.00, 6800.00,  4
+) AS m
+JOIN usuarios u ON u.email = 'amanda@teste.com';
 
 SHOW TABLES;
 
@@ -118,22 +138,24 @@ DESCRIBE metas;
 
 SELECT * FROM categorias;
 
+-- Gasto por categoria no mês atual
 SELECT c.nome AS categoria,
        SUM(t.valor) AS total_gasto
 FROM transacoes t
 JOIN categorias c ON c.id_categoria = t.categoria_id
 WHERE t.usuario_id = 1
   AND c.tipo = 'despesa'
-  AND t.data_transacao BETWEEN '2024-08-01' AND '2024-08-31'
+  AND t.data_transacao BETWEEN DATE_FORMAT(CURDATE(), '%Y-%m-01') AND LAST_DAY(CURDATE())
 GROUP BY c.nome
 ORDER BY total_gasto DESC;
 
+-- Total de receitas e de despesas no mês atual
 SELECT c.tipo,
        SUM(t.valor) AS total
 FROM transacoes t
 JOIN categorias c ON c.id_categoria = t.categoria_id
 WHERE t.usuario_id = 1
-  AND t.data_transacao BETWEEN '2024-08-01' AND '2024-08-31'
+  AND t.data_transacao BETWEEN DATE_FORMAT(CURDATE(), '%Y-%m-01') AND LAST_DAY(CURDATE())
 GROUP BY c.tipo;
 
 SELECT YEAR(t.data_transacao) AS ano,
@@ -146,15 +168,14 @@ WHERE t.usuario_id = 1
 GROUP BY YEAR(t.data_transacao), MONTH(t.data_transacao)
 ORDER BY ano, mes;
 
-SELECT YEAR(t.data_transacao) AS ano,
-       MONTH(t.data_transacao) AS mes,
+SELECT MONTH(t.data_transacao) AS mes,
        SUM(t.valor) AS total_alimentacao
 FROM transacoes t
 JOIN categorias c ON c.id_categoria = t.categoria_id
 WHERE t.usuario_id = 1
   AND c.nome = 'Alimentação'
-GROUP BY YEAR(t.data_transacao), MONTH(t.data_transacao)
-ORDER BY ano, mes;
+GROUP BY MONTH(t.data_transacao)
+ORDER BY mes;
 
 SELECT c.nome AS categoria,
        COUNT(*) AS quantidade,
@@ -187,39 +208,3 @@ SELECT titulo,
        ROUND(valor_atual / valor_alvo * 100) AS porcentagem
 FROM metas
 WHERE usuario_id = 1;
-
-
-SELECT t.data_transacao AS dia,
-       SUM(t.valor) AS total_gasto
-FROM transacoes t
-JOIN categorias c ON c.id_categoria = t.categoria_id
-WHERE t.usuario_id = 1
-  AND c.tipo = 'despesa'
-  AND t.data_transacao BETWEEN '2024-08-21' AND '2024-08-27'
-GROUP BY t.data_transacao
-ORDER BY dia;
-
-
-SELECT YEAR(t.data_transacao) AS ano,
-       MONTH(t.data_transacao) AS mes,
-       c.nome AS categoria,
-       SUM(t.valor) AS total_gasto
-FROM transacoes t
-JOIN categorias c ON c.id_categoria = t.categoria_id
-WHERE t.usuario_id = 1
-  AND c.tipo = 'despesa'
-  AND t.data_transacao BETWEEN '2024-07-01' AND '2024-08-31'
-GROUP BY YEAR(t.data_transacao), MONTH(t.data_transacao), c.nome
-ORDER BY categoria, ano, mes;
-
-
-SELECT t.descricao,
-       t.valor,
-       COUNT(*) AS quantidade
-FROM transacoes t
-JOIN categorias c ON c.id_categoria = t.categoria_id
-WHERE t.usuario_id = 1
-  AND c.tipo = 'despesa'
-GROUP BY t.descricao, t.valor
-HAVING COUNT(*) >= 2
-ORDER BY t.valor DESC;
