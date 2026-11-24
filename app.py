@@ -202,6 +202,8 @@ def _validar_transacao(dados, parcial=False):
             date.fromisoformat(dados.get("data_transacao"))
         except (TypeError, ValueError):
             erros.append("data_transacao deve ser YYYY-MM-DD")
+    if len(dados.get("observacao") or "") > 255:
+        erros.append("observacao deve ter no máximo 255 caracteres")
     return erros
 
 
@@ -213,7 +215,7 @@ def listar_transacoes():
     tipo = request.args.get("tipo")
 
     sql = """
-        SELECT t.id_transacao, t.valor, t.data_transacao, t.descricao,
+        SELECT t.id_transacao, t.valor, t.data_transacao, t.descricao, t.observacao,
                c.id_categoria, c.nome AS categoria, c.tipo
         FROM transacoes t
         JOIN categorias c ON c.id_categoria = t.categoria_id
@@ -235,20 +237,28 @@ def listar_transacoes():
 def criar_transacao():
     dados = request.get_json(silent=True) or {}
     erros = _validar_transacao(dados)
+    if dados.get("tipo") not in ("receita", "despesa"):
+        erros.append("tipo deve ser 'receita' ou 'despesa'")
     if erros:
         return jsonify({"erros": erros}), 400
 
-    if not execute_query(
-        "SELECT id_categoria FROM categorias WHERE id_categoria = %s",
+    categoria = execute_query(
+        "SELECT id_categoria, tipo FROM categorias WHERE id_categoria = %s",
         (dados["categoria_id"],), fetch=True,
-    ):
+    )
+    if not categoria:
         return jsonify({"erro": "Categoria não encontrada"}), 404
 
+    # RN02: o tipo escolhido na tela precisa ser o mesmo tipo da categoria
+    # (evita uma receita ser gravada numa categoria de despesa)
+    if categoria[0]["tipo"] != dados["tipo"]:
+        return jsonify({"erro": f"A categoria escolhida não é de {dados['tipo']}"}), 400
+
     novo_id = execute_query(
-        """INSERT INTO transacoes (usuario_id, categoria_id, valor, data_transacao, descricao)
-           VALUES (%s, %s, %s, %s, %s)""",
+        """INSERT INTO transacoes (usuario_id, categoria_id, valor, data_transacao, descricao, observacao)
+           VALUES (%s, %s, %s, %s, %s, %s)""",
         (g.usuario_id, dados["categoria_id"], dados["valor"],
-         dados["data_transacao"], dados.get("descricao")),
+         dados["data_transacao"], dados.get("descricao"), dados.get("observacao") or None),
         commit=True,
     )
     return jsonify({"id_transacao": novo_id}), 201
@@ -268,8 +278,19 @@ def atualizar_transacao(id_transacao):
     ):
         return jsonify({"erro": "Transação não encontrada"}), 404
 
+    # RN02: se trocar a categoria informando o tipo, os dois precisam combinar
+    if "categoria_id" in dados and "tipo" in dados:
+        categoria = execute_query(
+            "SELECT tipo FROM categorias WHERE id_categoria = %s",
+            (dados["categoria_id"],), fetch=True,
+        )
+        if not categoria:
+            return jsonify({"erro": "Categoria não encontrada"}), 404
+        if categoria[0]["tipo"] != dados["tipo"]:
+            return jsonify({"erro": f"A categoria escolhida não é de {dados['tipo']}"}), 400
+
     campos, params = [], []
-    for c in ("categoria_id", "valor", "data_transacao", "descricao"):
+    for c in ("categoria_id", "valor", "data_transacao", "descricao", "observacao"):
         if c in dados:
             campos.append(f"{c} = %s"); params.append(dados[c])
     if not campos:
@@ -323,6 +344,150 @@ def resumo_transacoes():
     return jsonify(totais)
 
 
+def _periodo_do_mes_atual():
+    """Primeiro e último dia do mês atual (ex.: 2026-11-01 e 2026-11-30)."""
+    hoje = date.today()
+    inicio = hoje.replace(day=1)
+    proximo_mes = (inicio + timedelta(days=32)).replace(day=1)
+    return inicio, proximo_mes - timedelta(days=1)
+
+
+@trans_bp.route("/por-categoria", methods=["GET"])
+@token_required
+def gastos_por_categoria():
+    """Total de despesas por categoria. Sem inicio/fim, usa o mês atual.
+    Alimenta a rosca da tela Início e a tela Categorias."""
+    inicio_padrao, fim_padrao = _periodo_do_mes_atual()
+    inicio = request.args.get("inicio") or inicio_padrao.isoformat()
+    fim = request.args.get("fim") or fim_padrao.isoformat()
+
+    rows = execute_query(
+        """SELECT c.nome AS categoria, SUM(t.valor) AS total
+           FROM transacoes t
+           JOIN categorias c ON c.id_categoria = t.categoria_id
+           WHERE t.usuario_id = %s
+             AND c.tipo = 'despesa'
+             AND t.data_transacao BETWEEN %s AND %s
+           GROUP BY c.nome
+           ORDER BY total DESC""",
+        (g.usuario_id, inicio, fim), fetch=True,
+    )
+    return jsonify([
+        {"categoria": r["categoria"], "total": float(r["total"] or 0)} for r in rows
+    ])
+
+
+@trans_bp.route("/ultimos-7-dias", methods=["GET"])
+@token_required
+def gastos_ultimos_7_dias():
+    """Total de despesas em cada um dos últimos 7 dias (hoje incluído).
+    Dias sem gasto aparecem com total 0. Alimenta o gráfico semanal."""
+    hoje = date.today()
+    inicio = hoje - timedelta(days=6)
+
+    rows = execute_query(
+        """SELECT t.data_transacao AS dia, SUM(t.valor) AS total
+           FROM transacoes t
+           JOIN categorias c ON c.id_categoria = t.categoria_id
+           WHERE t.usuario_id = %s
+             AND c.tipo = 'despesa'
+             AND t.data_transacao BETWEEN %s AND %s
+           GROUP BY t.data_transacao""",
+        (g.usuario_id, inicio.isoformat(), hoje.isoformat()), fetch=True,
+    )
+    totais = {r["dia"]: float(r["total"] or 0) for r in rows}
+
+    dias = []
+    for i in range(7):
+        dia = inicio + timedelta(days=i)
+        dias.append({"data": dia.isoformat(), "total": totais.get(dia, 0.0)})
+    return jsonify(dias)
+
+
+NOMES_DIAS_SEMANA = {1: "Domingo", 2: "Segunda-feira", 3: "Terça-feira", 4: "Quarta-feira",
+                     5: "Quinta-feira", 6: "Sexta-feira", 7: "Sábado"}  # DAYOFWEEK do MySQL
+
+
+@trans_bp.route("/insights", methods=["GET"])
+@token_required
+def insights():
+    """Dados da tela Insights:
+    - mes: receitas e despesas do mês atual
+    - comparacao: categoria cujo gasto mais subiu em relação ao mês passado (ou null)
+    - pico: dia da semana com mais gastos nos últimos 30 dias (ou null)
+    - assinaturas: total do mês em serviços recorrentes (Netflix, Spotify...)"""
+    inicio_atual, fim_atual = _periodo_do_mes_atual()
+    fim_anterior = inicio_atual - timedelta(days=1)
+    inicio_anterior = fim_anterior.replace(day=1)
+
+    # Receitas e despesas do mês atual
+    mes = {"receita": 0.0, "despesa": 0.0}
+    for r in execute_query(
+        """SELECT c.tipo, SUM(t.valor) AS total
+           FROM transacoes t
+           JOIN categorias c ON c.id_categoria = t.categoria_id
+           WHERE t.usuario_id = %s AND t.data_transacao BETWEEN %s AND %s
+           GROUP BY c.tipo""",
+        (g.usuario_id, inicio_atual, fim_atual), fetch=True,
+    ):
+        mes[r["tipo"]] = float(r["total"] or 0)
+
+    # Gasto de cada categoria neste mês e no mês passado
+    rows = execute_query(
+        """SELECT c.nome AS categoria,
+                  SUM(CASE WHEN t.data_transacao >= %s THEN t.valor ELSE 0 END) AS atual,
+                  SUM(CASE WHEN t.data_transacao <  %s THEN t.valor ELSE 0 END) AS anterior
+           FROM transacoes t
+           JOIN categorias c ON c.id_categoria = t.categoria_id
+           WHERE t.usuario_id = %s
+             AND c.tipo = 'despesa'
+             AND t.data_transacao BETWEEN %s AND %s
+           GROUP BY c.nome""",
+        (inicio_atual, inicio_atual, g.usuario_id, inicio_anterior, fim_atual), fetch=True,
+    )
+    comparacao = None
+    for r in rows:
+        atual, anterior = float(r["atual"] or 0), float(r["anterior"] or 0)
+        if anterior > 0 and atual > anterior:
+            aumento = (atual - anterior) / anterior * 100
+            if comparacao is None or aumento > comparacao["aumento_pct"]:
+                comparacao = {"categoria": r["categoria"], "atual": atual,
+                              "anterior": anterior, "aumento_pct": round(aumento)}
+
+    # Dia da semana com mais gastos nos últimos 30 dias
+    hoje = date.today()
+    rows = execute_query(
+        """SELECT DAYOFWEEK(t.data_transacao) AS dia, SUM(t.valor) AS total
+           FROM transacoes t
+           JOIN categorias c ON c.id_categoria = t.categoria_id
+           WHERE t.usuario_id = %s
+             AND c.tipo = 'despesa'
+             AND t.data_transacao BETWEEN %s AND %s
+           GROUP BY DAYOFWEEK(t.data_transacao)
+           ORDER BY total DESC
+           LIMIT 1""",
+        (g.usuario_id, hoje - timedelta(days=29), hoje), fetch=True,
+    )
+    pico = None
+    if rows:
+        pico = {"dia": NOMES_DIAS_SEMANA[rows[0]["dia"]], "total": float(rows[0]["total"] or 0)}
+
+    # Assinaturas: despesas do mês cuja descrição cita um serviço recorrente
+    rows = execute_query(
+        """SELECT COALESCE(SUM(t.valor), 0) AS total
+           FROM transacoes t
+           JOIN categorias c ON c.id_categoria = t.categoria_id
+           WHERE t.usuario_id = %s
+             AND c.tipo = 'despesa'
+             AND t.data_transacao BETWEEN %s AND %s
+             AND LOWER(t.descricao) REGEXP 'assinatura|netflix|spotify|youtube|amazon prime|disney|hbo|globoplay|deezer'""",
+        (g.usuario_id, inicio_atual, fim_atual), fetch=True,
+    )
+    assinaturas = float(rows[0]["total"] or 0)
+
+    return jsonify({"mes": mes, "comparacao": comparacao, "pico": pico, "assinaturas": assinaturas})
+
+
 # Rotas: Metas
 metas_bp = Blueprint("metas", __name__, url_prefix="/api/metas")
 
@@ -330,37 +495,70 @@ metas_bp = Blueprint("metas", __name__, url_prefix="/api/metas")
 @metas_bp.route("", methods=["GET"])
 @token_required
 def listar_metas():
+    # Metas sem prazo vão para o fim da lista (prazo IS NULL vale 1, as outras 0)
     return jsonify(execute_query(
         """SELECT id_meta, titulo, valor_alvo, valor_atual, prazo,
                   (valor_atual / valor_alvo * 100) AS progresso_pct
-           FROM metas WHERE usuario_id = %s ORDER BY prazo""",
+           FROM metas WHERE usuario_id = %s
+           ORDER BY prazo IS NULL, prazo, id_meta""",
         (g.usuario_id,), fetch=True,
     ))
+
+
+def _validar_meta(dados, parcial=False):
+    """Confere os campos de uma meta (RN01: valores numéricos e maiores que zero).
+    Devolve (erros, valores_limpos)."""
+    erros, limpos = [], {}
+
+    if not parcial or "titulo" in dados:
+        titulo = (dados.get("titulo") or "").strip()
+        if not titulo:
+            erros.append("titulo é obrigatório")
+        elif len(titulo) > 150:
+            erros.append("titulo deve ter no máximo 150 caracteres")
+        limpos["titulo"] = titulo
+
+    if not parcial or "valor_alvo" in dados:
+        try:
+            limpos["valor_alvo"] = float(dados.get("valor_alvo"))
+            if limpos["valor_alvo"] <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            erros.append("valor_alvo deve ser um número maior que zero")
+
+    if "valor_atual" in dados or not parcial:
+        try:
+            limpos["valor_atual"] = float(dados.get("valor_atual") or 0)
+            if limpos["valor_atual"] < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            erros.append("valor_atual deve ser um número maior ou igual a zero")
+
+    # Prazo é opcional: vazio vira NULL no banco
+    if not parcial or "prazo" in dados:
+        prazo = dados.get("prazo") or None
+        if prazo:
+            try:
+                date.fromisoformat(prazo)
+            except (TypeError, ValueError):
+                erros.append("prazo deve ser YYYY-MM-DD")
+        limpos["prazo"] = prazo
+
+    return erros, limpos
 
 
 @metas_bp.route("", methods=["POST"])
 @token_required
 def criar_meta():
     dados = request.get_json(silent=True) or {}
-    titulo = (dados.get("titulo") or "").strip()
-    if not titulo:
-        return jsonify({"erro": "titulo é obrigatório"}), 400
-    try:
-        valor_alvo = float(dados.get("valor_alvo"))
-        if valor_alvo <= 0:
-            raise ValueError
-    except (TypeError, ValueError):
-        return jsonify({"erro": "valor_alvo inválido"}), 400
-    try:
-        date.fromisoformat(dados.get("prazo"))
-    except (TypeError, ValueError):
-        return jsonify({"erro": "prazo deve ser YYYY-MM-DD"}), 400
+    erros, m = _validar_meta(dados)
+    if erros:
+        return jsonify({"erros": erros}), 400
 
     novo_id = execute_query(
         """INSERT INTO metas (usuario_id, titulo, valor_alvo, valor_atual, prazo)
            VALUES (%s, %s, %s, %s, %s)""",
-        (g.usuario_id, titulo, valor_alvo,
-         float(dados.get("valor_atual", 0)), dados["prazo"]),
+        (g.usuario_id, m["titulo"], m["valor_alvo"], m["valor_atual"], m["prazo"]),
         commit=True,
     )
     return jsonify({"id_meta": novo_id}), 201
@@ -376,19 +574,51 @@ def atualizar_meta(id_meta):
     ):
         return jsonify({"erro": "Meta não encontrada"}), 404
 
-    campos, params = [], []
-    for c in ("titulo", "valor_alvo", "valor_atual", "prazo"):
-        if c in dados:
-            campos.append(f"{c} = %s"); params.append(dados[c])
-    if not campos:
+    erros, m = _validar_meta(dados, parcial=True)
+    if erros:
+        return jsonify({"erros": erros}), 400
+    if not m:
         return jsonify({"erro": "Nenhum campo para atualizar"}), 400
 
-    params.extend([id_meta, g.usuario_id])
+    campos = [f"{c} = %s" for c in m]
+    params = list(m.values()) + [id_meta, g.usuario_id]
     execute_query(
         f"UPDATE metas SET {', '.join(campos)} WHERE id_meta = %s AND usuario_id = %s",
         tuple(params), commit=True,
     )
     return jsonify({"mensagem": "Meta atualizada"})
+
+
+@metas_bp.route("/<int:id_meta>/fundos", methods=["POST"])
+@token_required
+def adicionar_fundos(id_meta):
+    """Soma um valor ao que já foi guardado na meta.
+    A soma é feita no próprio banco (valor_atual = valor_atual + valor),
+    assim dois cliques seguidos nunca apagam um ao outro."""
+    dados = request.get_json(silent=True) or {}
+    try:
+        valor = float(dados.get("valor"))
+        if valor <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return jsonify({"erro": "valor deve ser um número maior que zero"}), 400
+
+    if not execute_query(
+        "SELECT id_meta FROM metas WHERE id_meta = %s AND usuario_id = %s",
+        (id_meta, g.usuario_id), fetch=True,
+    ):
+        return jsonify({"erro": "Meta não encontrada"}), 404
+
+    execute_query(
+        "UPDATE metas SET valor_atual = valor_atual + %s WHERE id_meta = %s AND usuario_id = %s",
+        (valor, id_meta, g.usuario_id), commit=True,
+    )
+    meta = execute_query(
+        "SELECT id_meta, valor_atual, valor_alvo FROM metas WHERE id_meta = %s AND usuario_id = %s",
+        (id_meta, g.usuario_id), fetch=True,
+    )[0]
+    return jsonify({"id_meta": meta["id_meta"], "valor_atual": float(meta["valor_atual"]),
+                    "valor_alvo": float(meta["valor_alvo"])})
 
 
 @metas_bp.route("/<int:id_meta>", methods=["DELETE"])
