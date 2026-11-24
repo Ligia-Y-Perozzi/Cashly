@@ -1,2 +1,0 @@
-# Cashly
-Projeto Cashly oi

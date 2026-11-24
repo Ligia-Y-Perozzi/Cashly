@@ -287,9 +287,6 @@ button { cursor: pointer; }
 
 /* ===== Itens adicionados a partir do Figma ===== */
  
-/* Botão Nova Meta: afastado dos cartões */
-.botao-nova-meta { margin-bottom: 28px; }
-
 /* Menu: item Insights */
 .icone-insights { color: var(--coral); font-size: 20px; }
  
@@ -385,10 +382,20 @@ button { cursor: pointer; }
 }
  
 
-/* Botão de sair e categoria "Outros" */
+/* Botão Nova Meta: afastado dos cartões */
+.botao-nova-meta { margin-bottom: 28px; }
+
+/* Botão de sair e categoria "Outros" (cinza) */
 .botao-sair { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 40px; margin-top: 14px; border: 1px solid #292d57; border-radius: 12px; background: transparent; color: #aeb2c8; font-size: 14px; }
 .botao-sair:hover { border-color: var(--coral); color: var(--coral); }
 .ponto-cinza { background: #8c93a2; }
 .cor-cinza { background: #8c93a2; }
 .fundo-cinza { background: #f1f2f5; color: #8c93a2; }
 .progresso.cat-cinza span { background: #8c93a2; }
+
+/* Extrato agrupado por dia */
+.grupo-transacoes + .grupo-transacoes { margin-top: 25px; }
+
+/* Mensagem quando ainda não há dados para os gráficos */
+.sem-dados { margin: 0; color: var(--texto-suave); font-size: 13px; }
+.legenda li.sem-dados { display: block; }
