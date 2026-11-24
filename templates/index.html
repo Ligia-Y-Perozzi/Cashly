@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cashly | Gerenciador Pessoal</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/script.js" defer></script>
+</head>
+<body>
+
+  <!-- TELA DE AUTENTICAÇÃO (NOVA - adicionada para o login funcionar) -->
+  <div id="tela-auth" class="fundo-modal" style="display: flex; z-index: 9999;">
+    <section class="modal" style="width: 400px;">
+      <h2 id="titulo-auth">Entrar no Cashly</h2>
+      <p id="subtitulo-auth">Acesse sua conta para continuar.</p>
+      
+      <form id="form-auth">
+        <div id="campo-nome" style="display: none;">
+          <label for="auth-nome">Nome</label>
+          <input id="auth-nome" name="nome" type="text" placeholder="Seu nome">
+        </div>
+        
+        <label for="auth-email">Email</label>
+        <input id="auth-email" name="email" type="email" placeholder="seu@email.com" required>
+        
+        <label for="auth-senha">Senha</label>
+        <input id="auth-senha" name="senha" type="password" placeholder="Sua senha" required>
+        
+        <div class="acoes-form" style="margin-top: 20px;">
+          <button class="botao botao-coral botao-enviar" type="submit" id="btn-submit-auth" style="width: 100%;">Entrar</button>
+        </div>
+      </form>
+      
+      <p style="text-align: center; margin-top: 15px;">
+        <a href="#" id="link-alternar-auth" style="color: var(--coral);">Não tem conta? Cadastre-se</a>
+      </p>
+    </section>
+  </div>
+
+  <!-- LAYOUT ORIGINAL -->
+  <div class="layout">
+    <aside class="barra-lateral">
+      <a class="marca" href="#inicio" aria-label="Cashly, página inicial">
+        <span class="marca-icone">$</span>
+        <span><strong>Cashly</strong><small>Gerenciador Pessoal</small></span>
+      </a>
+ 
+      <nav class="menu" aria-label="Navegação principal">
+        <button class="link-menu ativo" type="button" data-pagina="inicio">
+          <span class="icone-menu icone-casa" aria-hidden="true">◆</span>Início
+        </button>
+        <button class="link-menu" type="button" data-pagina="extrato">
+          <span class="icone-menu icone-extrato" aria-hidden="true"></span>Extrato
+        </button>
+        <button class="link-menu" type="button" data-pagina="metas">
+          <span class="icone-menu icone-meta" aria-hidden="true">●</span>Metas
+        </button>
+        <button class="link-menu" type="button" data-pagina="insights">
+          <span class="icone-menu icone-insights" aria-hidden="true">▲</span>Insights
+        </button>
+      </nav>
+ 
+      <div class="usuario">
+        <!-- Nome e inicial ficam vazios até o login (preenchidos por mostrarUsuario no script.js) -->
+        <div class="avatar" id="avatar-usuario" aria-hidden="true"></div>
+        <div><small>Bem-vindo(a) de volta</small><strong id="nome-usuario-sidebar"></strong></div>
+      </div>
+      <button class="botao-sair" id="botao-sair" type="button"><span aria-hidden="true">↩</span>Sair</button>
+    </aside>
+ 
+    <main class="conteudo">
+      <header class="cabecalho">
+        <div>
+          <h1 id="titulo-pagina">Visão Geral</h1>
+          <p id="subtitulo-pagina">Acompanhe suas finanças em tempo real.</p>
+        </div>
+        <div class="acoes-cabecalho">
+          <button class="botao botao-coral" id="botao-nova-transacao" type="button">
+            <span aria-hidden="true">＋</span> Nova Transação
+          </button>
+          <button class="botao-sino" type="button" aria-label="Notificações">
+            <span aria-hidden="true">🔔</span><i class="badge-sino" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+ 
+      <!-- Tela Início -->
+      <section class="pagina" id="pagina-inicio">
+        <section class="cartao-saldo" aria-label="Resumo financeiro">
+          <div class="saldo-principal">
+            <span>Saldo Disponível</span>
+            <strong id="saldo">R$ 0,00</strong>
+          </div>
+          <div class="resumo-movimento">
+            <div class="barra-resumo"><span></span></div>
+            <div class="valores-resumo">
+              <p>Entradas do mês<strong class="texto-verde" id="total-entradas">+ R$ 0,00</strong></p>
+              <p>Saídas do mês<strong class="texto-coral" id="total-saidas">- R$ 0,00</strong></p>
+            </div>
+          </div>
+        </section>
+ 
+        <div class="grade-paineis">
+          <section class="cartao painel-categorias">
+            <div class="titulo-cartao">
+              <h2>Gastos por Categoria</h2><span class="etiqueta">Este Mês</span>
+            </div>
+            <div class="categorias-conteudo">
+              <!-- Preenchido via JS (desenharCategorias) -->
+              <div class="grafico-rosca" id="grafico-rosca" role="img" aria-label="Gráfico de gastos por categoria">
+                <div><small>Total Gasto</small><strong id="total-rosca">R$ 0</strong></div>
+              </div>
+              <ul class="legenda" id="legenda-rosca"></ul>
+            </div>
+            <button class="link-detalhes" type="button" data-ir="categorias">Ver detalhes por categoria →</button>
+          </section>
+ 
+          <section class="cartao painel-semanal">
+            <div class="titulo-cartao">
+              <div><h2>Evolução Semanal de Gastos</h2><p>Despesas de cada um dos últimos 7 dias</p></div>
+              <span class="destaque-coral">Despesas Ativas</span>
+            </div>
+            <!-- Preenchido via JS (desenharSemana) -->
+            <div class="grafico-linha" role="img" aria-label="Gráfico de gastos nos últimos sete dias">
+              <div class="linhas-grade"><i></i><i></i><i></i></div>
+              <svg viewBox="0 0 500 125" preserveAspectRatio="none" aria-hidden="true">
+                <polyline id="linha-semana" points=""></polyline>
+              </svg>
+            </div>
+            <div class="dias-semana" id="dias-semana"></div>
+          </section>
+        </div>
+      </section>
+ 
+      <!-- Tela Extrato -->
+      <section class="pagina escondido" id="pagina-extrato">
+        <section class="cartao filtros-extrato" aria-label="Filtros do extrato">
+          <div class="seletor-mes">
+            <button class="botao-seta" id="mes-anterior" type="button" aria-label="Mês anterior">‹</button>
+            <strong id="mes-atual">Agosto, 2024</strong>
+            <button class="botao-seta" id="mes-proximo" type="button" aria-label="Próximo mês">›</button>
+          </div>
+          <label class="busca">
+            <span aria-hidden="true">⌕</span>
+            <input id="busca-transacao" type="search" placeholder="Buscar transação..." aria-label="Buscar transação">
+          </label>
+          <div class="filtros-tipo" aria-label="Filtrar transações">
+            <button type="button" class="filtro ativo" data-filtro="todas">Tudo</button>
+            <button type="button" class="filtro" data-filtro="receita">Receitas</button>
+            <button type="button" class="filtro" data-filtro="despesa">Despesas</button>
+          </div>
+        </section>
+ 
+        <section class="cartao lista-extrato">
+          <!-- Preenchido via JS: um grupo por dia (Hoje, Ontem, data) -->
+          <div id="lista-transacoes"></div>
+          <p class="mensagem-vazia escondido" id="mensagem-vazia">Nenhuma transação encontrada neste mês.</p>
+        </section>
+      </section>
+ 
+      <!-- Tela Metas -->
+      <section class="pagina escondido" id="pagina-metas">
+        <button class="botao botao-coral botao-nova-meta" id="botao-nova-meta" type="button">+ Nova Meta</button>
+        <div class="grade-metas" id="lista-metas">
+          <!-- Preenchido via JS -->
+        </div>
+      </section>
+ 
+      <!-- Tela Categorias (aberta pelo botão "Ver detalhes" da tela Início) -->
+      <!-- Preenchida via JS (desenharCategorias) -->
+      <section class="pagina escondido" id="pagina-categorias">
+        <section class="cartao cartao-distribuicao" aria-label="Distribuição geral dos gastos">
+          <div class="topo-distribuicao">
+            <h2>Distribuição Geral</h2>
+            <strong id="total-distribuicao">R$ 0,00</strong>
+          </div>
+          <div class="barra-segmentada" id="barra-segmentada" role="img" aria-label="Barra com a distribuição dos gastos por categoria"></div>
+          <ul class="legenda-horizontal" id="legenda-horizontal"></ul>
+        </section>
+
+        <h2 class="titulo-secao">Detalhes por Categoria</h2>
+        <div class="lista-categorias" id="lista-categorias-detalhe"></div>
+      </section>
+
+      <!-- Tela Insights -->
+      <!-- Preenchida via JS (desenharInsights). Os textos abaixo aparecem enquanto não há dados. -->
+      <section class="pagina escondido" id="pagina-insights">
+        <div class="grade-insights">
+          <article class="cartao-alerta" aria-label="Alerta de gasto">
+            <div class="topo-alerta">
+              <span class="icone-alerta" aria-hidden="true">⚠</span>
+              <strong>ALERTA DE GASTO</strong>
+            </div>
+            <p class="texto-alerta" id="texto-alerta">Ainda não há lançamentos suficientes para comparar com o mês passado.</p>
+            <div class="comparativo">
+              <div class="coluna-barra"><i class="barra-julho" id="barra-mes-anterior"></i><span id="rotulo-mes-anterior">Mês passado</span></div>
+              <div class="coluna-barra atual"><i class="barra-agosto" id="barra-mes-atual"></i><span id="rotulo-mes-atual">Este mês</span></div>
+              <div class="diferenca"><small>Diferença de valor</small><strong id="diferenca-valor">R$ 0,00</strong></div>
+            </div>
+          </article>
+
+          <div class="coluna-insights">
+            <section>
+              <h2 class="titulo-bloco">Padrões Identificados</h2>
+              <div class="lista-insights">
+                <article class="cartao cartao-insight">
+                  <div class="textos"><h3>Dia com mais gastos</h3><p id="texto-pico">Ainda não há despesas suficientes para identificar um padrão.</p></div>
+                  <span class="pilula" id="pilula-pico">—</span>
+                </article>
+                <article class="cartao cartao-insight">
+                  <div class="textos"><h3>Assinaturas e Recorrentes</h3><p id="texto-assinaturas">Nenhuma assinatura identificada este mês.</p></div>
+                  <span class="pilula" id="pilula-assinaturas">R$ 0/mês</span>
+                </article>
+              </div>
+            </section>
+
+            <section>
+              <h2 class="titulo-bloco">Dicas &amp; Recomendações</h2>
+              <div class="lista-insights" id="lista-dicas">
+                <article class="cartao cartao-insight dica">
+                  <span class="icone-dica fundo-verde" aria-hidden="true">💡</span>
+                  <div class="textos"><h3>Comece registrando seus gastos</h3><p>As dicas aparecem aqui conforme você lança receitas e despesas.</p></div>
+                </article>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <footer class="rodape"><p>© 2026 Cashly — Projeto de PI</p></footer>
+    </main>
+  </div>
+ 
+  <!-- Formulário para cadastrar uma transação -->
+  <div class="fundo-modal escondido" id="modal-transacao">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="titulo-modal">
+      <button class="fechar-modal" id="fechar-modal" type="button" aria-label="Fechar">×</button>
+      <h2 id="titulo-modal">Nova Transação</h2>
+      <p>Preencha os dados para adicionar ao extrato.</p>
+      <form id="form-transacao">
+        <span class="rotulo-campo">Tipo de Lançamento</span>
+        <div class="tipo-segmentado" role="group" aria-label="Tipo de lançamento">
+          <button class="aba-tipo" type="button" data-tipo="receita">Receita</button>
+          <button class="aba-tipo ativo" type="button" data-tipo="despesa">Despesa</button>
+        </div>
+        <input id="tipo" name="tipo" type="hidden" value="despesa">
+        <label for="descricao">Descrição</label>
+        <input id="descricao" name="descricao" type="text" placeholder="Ex.: Conta de luz" required>
+        <label for="categoria">Categoria</label>
+        <input id="categoria" name="categoria" type="text" list="lista-categorias" autocomplete="off" placeholder="Ex.: Moradia" required>
+        <datalist id="lista-categorias"></datalist>
+        <label for="valor">Valor (R$)</label>
+        <input id="valor" name="valor" type="number" min="0.01" step="0.01" placeholder="0,00" required>
+        <label for="data">Data do Pagamento</label>
+        <input id="data" name="data" type="date">
+        <label for="observacao">Observações (Opcional)</label>
+        <textarea id="observacao" name="observacao" rows="3" placeholder="Escreva uma nota..."></textarea>
+        <div class="acoes-form">
+          <button class="botao botao-voltar" id="voltar-modal" type="button">Voltar</button>
+          <button class="botao botao-coral botao-enviar" id="botao-salvar" type="submit">Salvar Despesa</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <!-- Formulário para criar uma meta -->
+  <div class="fundo-modal escondido" id="modal-meta">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-meta">
+      <button class="fechar-modal" id="fechar-modal-meta" type="button" aria-label="Fechar">×</button>
+      <h2 id="titulo-modal-meta">Nova Meta</h2>
+      <p>Defina um objetivo e acompanhe quanto já guardou.</p>
+      <form id="form-meta">
+        <label for="meta-titulo">Nome da meta</label>
+        <input id="meta-titulo" name="titulo" type="text" maxlength="150" placeholder="Ex.: Reserva de emergência" required>
+        <label for="meta-valor-alvo">Valor total (R$)</label>
+        <input id="meta-valor-alvo" name="valor_alvo" type="number" min="0.01" step="0.01" placeholder="0,00" required>
+        <label for="meta-valor-atual">Já guardado (R$, opcional)</label>
+        <input id="meta-valor-atual" name="valor_atual" type="number" min="0" step="0.01" placeholder="0,00">
+        <label for="meta-prazo">Prazo (opcional)</label>
+        <input id="meta-prazo" name="prazo" type="date">
+        <div class="acoes-form">
+          <button class="botao botao-voltar" id="voltar-modal-meta" type="button">Voltar</button>
+          <button class="botao botao-coral botao-enviar" type="submit">Salvar Meta</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</body>
+</html>
